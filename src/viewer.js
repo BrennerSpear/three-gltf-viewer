@@ -17,7 +17,6 @@ import {
   WebGLRenderer,
   sRGBEncoding,
 } from 'three';
-import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -30,6 +29,8 @@ import { GUI } from 'dat.gui';
 import { environments } from '../assets/environment/index.js';
 import { createBackground } from '../lib/three-vignette.js';
 
+// import { createCanvas } from 'node-canvas-webgl';
+
 const DEFAULT_CAMERA = '[default]';
 
 const MANAGER = new LoadingManager();
@@ -37,18 +38,6 @@ const THREE_PATH = `https://unpkg.com/three@0.${REVISION}.x`
 const DRACO_LOADER = new DRACOLoader( MANAGER ).setDecoderPath( `${THREE_PATH}/examples/js/libs/draco/gltf/` );
 const KTX2_LOADER = new KTX2Loader( MANAGER ).setTranscoderPath( `${THREE_PATH}/examples/js/libs/basis/` );
 
-// glTF texture types. `envMap` is deliberately omitted, as it's used internally
-// by the loader but not part of the glTF format.
-const MAP_NAMES = [
-  'map',
-  'aoMap',
-  'emissiveMap',
-  'glossinessMap',
-  'metalnessMap',
-  'normalMap',
-  'roughnessMap',
-  'specularMap',
-];
 
 const Preset = {ASSET_GENERATOR: 'assetgenerator'};
 
@@ -89,9 +78,6 @@ export class Viewer {
 
     this.prevTime = 0;
 
-    this.stats = new Stats();
-    this.stats.dom.height = '48px';
-    [].forEach.call(this.stats.dom.children, (child) => (child.style.display = ''));
 
     this.scene = new Scene();
 
@@ -101,6 +87,8 @@ export class Viewer {
     this.defaultCamera = new PerspectiveCamera( fov, el.clientWidth / el.clientHeight, 0.01, 1000 );
     this.activeCamera = this.defaultCamera;
     this.scene.add( this.defaultCamera );
+
+    // const canvas = createCanvas(el.clientWidth, el.clientHeight);
 
     this.renderer = window.renderer = new WebGLRenderer({antialias: true});
     this.renderer.physicallyCorrectLights = true;
@@ -146,7 +134,6 @@ export class Viewer {
     const dt = (time - this.prevTime) / 1000;
 
     this.controls.update();
-    this.stats.update();
     this.mixer && this.mixer.update(dt);
     this.render();
 
@@ -498,13 +485,6 @@ export class Viewer {
     this.cameraFolder = gui.addFolder('Cameras');
     this.cameraFolder.domElement.style.display = 'none';
 
-    // Stats.
-    const perfFolder = gui.addFolder('Performance');
-    const perfLi = document.createElement('li');
-    this.stats.dom.style.position = 'static';
-    perfLi.appendChild(this.stats.dom);
-    perfLi.classList.add('gui-stats');
-    perfFolder.__ul.appendChild( perfLi );
 
     const guiWrap = document.createElement('div');
     this.el.appendChild( guiWrap );
@@ -548,6 +528,19 @@ export class Viewer {
       node.geometry.dispose();
 
     } );
+
+    // glTF texture types. `envMap` is deliberately omitted, as it's used internally
+    // by the loader but not part of the glTF format.
+    const MAP_NAMES = [
+        'map',
+        'aoMap',
+        'emissiveMap',
+        'glossinessMap',
+        'metalnessMap',
+        'normalMap',
+        'roughnessMap',
+        'specularMap',
+    ];
 
     // dispose textures
     traverseMaterials( this.content, (material) => {
