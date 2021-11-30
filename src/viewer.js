@@ -1,11 +1,9 @@
 import {
   AmbientLight,
   AnimationMixer,
-  AxesHelper,
   Box3,
   Cache,
   DirectionalLight,
-  GridHelper,
   HemisphereLight,
   LinearEncoding,
   LoaderUtils,
@@ -14,7 +12,6 @@ import {
   PerspectiveCamera,
   REVISION,
   Scene,
-  SkeletonHelper,
   UnsignedByteType,
   Vector3,
   WebGLRenderer,
@@ -79,9 +76,6 @@ export class Viewer {
       playbackSpeed: 1.0,
       actionStates: {},
       camera: DEFAULT_CAMERA,
-      wireframe: false,
-      skeleton: false,
-      grid: false,
 
       // Lights
       addLights: true,
@@ -141,8 +135,7 @@ export class Viewer {
     this.animCtrls = [];
     this.morphFolder = null;
     this.morphCtrls = [];
-    this.skeletonHelpers = [];
-    this.gridHelper = null;
+
 
     this.addGUI();
     if (options.kiosk) this.gui.close();
@@ -467,35 +460,6 @@ export class Viewer {
 
   }
 
-  updateDisplay () {
-    if (this.skeletonHelpers.length) {
-      this.skeletonHelpers.forEach((helper) => this.scene.remove(helper));
-    }
-
-    traverseMaterials(this.content, (material) => {
-      material.wireframe = this.state.wireframe;
-    });
-
-    this.content.traverse((node) => {
-      if (node.isMesh && node.skeleton && this.state.skeleton) {
-        const helper = new SkeletonHelper(node.skeleton.bones[0].parent);
-        helper.material.linewidth = 3;
-        this.scene.add(helper);
-        this.skeletonHelpers.push(helper);
-      }
-    });
-
-    if (this.state.grid !== Boolean(this.gridHelper)) {
-      if (this.state.grid) {
-        this.gridHelper = new GridHelper();
-        this.scene.add(this.gridHelper);
-      } else {
-        this.scene.remove(this.gridHelper);
-        this.gridHelper = null;
-      }
-    }
-  }
-
   updateBackground () {
     this.vignette.style({colors: [this.state.bgColor1, this.state.bgColor2]});
   }
@@ -508,12 +472,6 @@ export class Viewer {
     const dispFolder = gui.addFolder('Display');
     const envBackgroundCtrl = dispFolder.add(this.state, 'background');
     envBackgroundCtrl.onChange(() => this.updateEnvironment());
-    const wireframeCtrl = dispFolder.add(this.state, 'wireframe');
-    wireframeCtrl.onChange(() => this.updateDisplay());
-    const skeletonCtrl = dispFolder.add(this.state, 'skeleton');
-    skeletonCtrl.onChange(() => this.updateDisplay());
-    const gridCtrl = dispFolder.add(this.state, 'grid');
-    gridCtrl.onChange(() => this.updateDisplay());
     dispFolder.add(this.controls, 'autoRotate');
     dispFolder.add(this.controls, 'screenSpacePanning');
     const bgColor1Ctrl = dispFolder.addColor(this.state, 'bgColor1');
