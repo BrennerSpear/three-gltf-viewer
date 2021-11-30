@@ -10,6 +10,8 @@ if (!(window.File && window.FileReader && window.FileList && window.Blob)) {
   console.error('WebGL is not supported in this browser.');
 }
 
+const fileName = 'Hydrangea'
+
 class App {
 
   /**
@@ -18,10 +20,12 @@ class App {
    */
   constructor (el, location) {
 
+    console.log('location', location);
     const hash = location.hash ? queryString.parse(location.hash) : {};
+    console.log('hash', hash);
     this.options = {
       kiosk: Boolean(hash.kiosk),
-      model: hash.model || '',
+      model: hash.model || fileName,
       preset: hash.preset || '',
       cameraPosition: hash.cameraPosition
         ? hash.cameraPosition.split(',').map(Number)
@@ -32,12 +36,9 @@ class App {
     this.viewer = null;
     this.viewerEl = null;
     this.spinnerEl = el.querySelector('.spinner');
-    this.dropEl = el.querySelector('.dropzone');
+    this.sceneEl = el.querySelector('.scene');
     this.inputEl = el.querySelector('#file-input');
     this.validationCtrl = new ValidationController(el);
-
-    this.createDropzone();
-    this.hideSpinner();
 
     const options = this.options;
 
@@ -52,47 +53,16 @@ class App {
   }
 
   /**
-   * Sets up the drag-and-drop controller.
-   */
-  createDropzone () {
-    const dropCtrl = new SimpleDropzone(this.dropEl, this.inputEl);
-    dropCtrl.on('drop', ({files}) => this.load(files));
-    dropCtrl.on('dropstart', () => this.showSpinner());
-    dropCtrl.on('droperror', () => this.hideSpinner());
-  }
-
-  /**
    * Sets up the view manager.
    * @return {Viewer}
    */
   createViewer () {
     this.viewerEl = document.createElement('div');
     this.viewerEl.classList.add('viewer');
-    this.dropEl.innerHTML = '';
-    this.dropEl.appendChild(this.viewerEl);
+    this.sceneEl.innerHTML = '';
+    this.sceneEl.appendChild(this.viewerEl);
     this.viewer = new Viewer(this.viewerEl, this.options);
     return this.viewer;
-  }
-
-  /**
-   * Loads a fileset provided by user action.
-   * @param  {Map<string, File>} fileMap
-   */
-  load (fileMap) {
-    let rootFile;
-    let rootPath;
-    Array.from(fileMap).forEach(([path, file]) => {
-      if (file.name.match(/\.(gltf|glb)$/)) {
-        rootFile = file;
-        rootPath = path.replace(file.name, '');
-      }
-    });
-
-    if (!rootFile) {
-      this.onError('No .gltf or .glb asset found.');
-    }
-
-    this.view(rootFile, rootPath, fileMap);
   }
 
   /**
@@ -101,28 +71,23 @@ class App {
    * @param  {string} rootPath
    * @param  {Map<string, File>} fileMap
    */
-  view (rootFile, rootPath, fileMap) {
+  view (modelName) {
 
     if (this.viewer) this.viewer.clear();
 
     const viewer = this.viewer || this.createViewer();
 
-    const fileURL = typeof rootFile === 'string'
-      ? rootFile
-      : URL.createObjectURL(rootFile);
-
     const cleanup = () => {
       this.hideSpinner();
-      if (typeof rootFile === 'object') URL.revokeObjectURL(fileURL);
     };
 
     viewer
-      .load(fileURL, rootPath, fileMap)
+      .load(modelName)
       .catch((e) => this.onError(e))
       .then((gltf) => {
-        if (!this.options.kiosk) {
-          this.validationCtrl.validate(fileURL, rootPath, fileMap, gltf);
-        }
+        // if (!this.options.kiosk) {
+        //   this.validationCtrl.validate(fileURL, rootPath, fileMap, gltf);
+        // } // TOODO add validation
         cleanup();
       });
   }

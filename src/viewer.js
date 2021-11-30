@@ -193,33 +193,33 @@ export class Viewer {
     this.axesRenderer.setSize(this.axesDiv.clientWidth, this.axesDiv.clientHeight);
   }
 
-  load ( url, rootPath, assetMap ) {
+  load ( modelName, rootPath, assetMap ) {
 
-    const baseURL = LoaderUtils.extractUrlBase(url);
+    const baseURL = LoaderUtils.extractUrlBase(modelName);
 
     // Load.
     return new Promise((resolve, reject) => {
 
       // Intercept and override relative URLs.
-      MANAGER.setURLModifier((url, path) => {
+    //   MANAGER.setURLModifier((url, path) => {
 
-        // URIs in a glTF file may be escaped, or not. Assume that assetMap is
-        // from an un-escaped source, and decode all URIs before lookups.
-        // See: https://github.com/donmccurdy/three-gltf-viewer/issues/146
-        const normalizedURL = rootPath + decodeURI(url)
-          .replace(baseURL, '')
-          .replace(/^(\.?\/)/, '');
+    //     // URIs in a glTF file may be escaped, or not. Assume that assetMap is
+    //     // from an un-escaped source, and decode all URIs before lookups.
+    //     // See: https://github.com/donmccurdy/three-gltf-viewer/issues/146
+    //     const normalizedURL = rootPath + decodeURI(url)
+    //       .replace(baseURL, '')
+    //       .replace(/^(\.?\/)/, '');
 
-        if (assetMap.has(normalizedURL)) {
-          const blob = assetMap.get(normalizedURL);
-          const blobURL = URL.createObjectURL(blob);
-          blobURLs.push(blobURL);
-          return blobURL;
-        }
+    //     if (assetMap.has(normalizedURL)) {
+    //       const blob = assetMap.get(normalizedURL);
+    //       const blobURL = URL.createObjectURL(blob);
+    //       blobURLs.push(blobURL);
+    //       return blobURL;
+    //     }
 
-        return (path || '') + url;
+    //     return (path || '') + url;
 
-      });
+    //   });
 
       const loader = new GLTFLoader( MANAGER )
         .setCrossOrigin('anonymous')
@@ -227,9 +227,10 @@ export class Viewer {
         .setKTX2Loader( KTX2_LOADER.detectSupport( this.renderer ) )
         .setMeshoptDecoder( MeshoptDecoder );
 
-      const blobURLs = [];
-
-      loader.load(url, (gltf) => {
+    //   const blobURLs = [];
+      console.log('url:',modelName)
+    //   '/assets/Hydrangea.glb'
+      loader.load(`/assets/${modelName}.glb`, (gltf) => {
 
         const scene = gltf.scene || gltf.scenes[0];
         const clips = gltf.animations || [];
@@ -244,7 +245,7 @@ export class Viewer {
 
         this.setContent(scene, clips);
 
-        blobURLs.forEach(URL.revokeObjectURL);
+        // blobURLs.forEach(URL.revokeObjectURL);
 
         // See: https://github.com/google/draco/issues/349
         // DRACOLoader.releaseDecoderModule();
