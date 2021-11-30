@@ -37,8 +37,6 @@ const THREE_PATH = `https://unpkg.com/three@0.${REVISION}.x`
 const DRACO_LOADER = new DRACOLoader( MANAGER ).setDecoderPath( `${THREE_PATH}/examples/js/libs/draco/gltf/` );
 const KTX2_LOADER = new KTX2Loader( MANAGER ).setTranscoderPath( `${THREE_PATH}/examples/js/libs/basis/` );
 
-const IS_IOS = isIOS();
-
 // glTF texture types. `envMap` is deliberately omitted, as it's used internally
 // by the loader but not part of the glTF format.
 const MAP_NAMES = [
@@ -121,7 +119,7 @@ export class Viewer {
 
     this.vignette = createBackground({
       aspect: this.defaultCamera.aspect,
-      grainScale: IS_IOS ? 0 : 0.001, // mattdesl/three-vignette-background#1
+      grainScale: 0.001,
       colors: [this.state.bgColor1, this.state.bgColor2]
     });
     this.vignette.name = 'Vignette';
@@ -131,10 +129,6 @@ export class Viewer {
 
     this.cameraCtrl = null;
     this.cameraFolder = null;
-    this.animFolder = null;
-    this.animCtrls = [];
-    this.morphFolder = null;
-    this.morphCtrls = [];
 
 
     this.addGUI();
@@ -301,7 +295,6 @@ export class Viewer {
     this.updateGUI();
     this.updateEnvironment();
     this.updateTextureEncoding();
-    this.updateDisplay();
 
     window.content = this.content;
     console.info('[glTF Viewer] THREE.Scene exported as `window.content`.');
@@ -501,19 +494,6 @@ export class Viewer {
       lightFolder.addColor(this.state, 'directColor')
     ].forEach((ctrl) => ctrl.onChange(() => this.updateLights()));
 
-    // Animation controls.
-    this.animFolder = gui.addFolder('Animation');
-    this.animFolder.domElement.style.display = 'none';
-    const playbackSpeedCtrl = this.animFolder.add(this.state, 'playbackSpeed', 0, 1);
-    playbackSpeedCtrl.onChange((speed) => {
-      if (this.mixer) this.mixer.timeScale = speed;
-    });
-    this.animFolder.add({playAll: () => this.playAllClips()}, 'playAll');
-
-    // Morph target controls.
-    this.morphFolder = gui.addFolder('Morph Targets');
-    this.morphFolder.domElement.style.display = 'none';
-
     // Camera controls.
     this.cameraFolder = gui.addFolder('Cameras');
     this.cameraFolder.domElement.style.display = 'none';
@@ -537,20 +517,8 @@ export class Viewer {
   updateGUI () {
     this.cameraFolder.domElement.style.display = 'none';
 
-    this.morphCtrls.forEach((ctrl) => ctrl.remove());
-    this.morphCtrls.length = 0;
-    this.morphFolder.domElement.style.display = 'none';
-
-    this.animCtrls.forEach((ctrl) => ctrl.remove());
-    this.animCtrls.length = 0;
-    this.animFolder.domElement.style.display = 'none';
-
     const cameraNames = [];
-    const morphMeshes = [];
     this.content.traverse((node) => {
-      if (node.isMesh && node.morphTargetInfluences) {
-        morphMeshes.push(node);
-      }
       if (node.isCamera) {
         node.name = node.name || `VIEWER__camera_${cameraNames.length + 1}`;
         cameraNames.push(node.name);
@@ -563,50 +531,6 @@ export class Viewer {
       const cameraOptions = [DEFAULT_CAMERA].concat(cameraNames);
       this.cameraCtrl = this.cameraFolder.add(this.state, 'camera', cameraOptions);
       this.cameraCtrl.onChange((name) => this.setCamera(name));
-    }
-
-    if (morphMeshes.length) {
-      this.morphFolder.domElement.style.display = '';
-      morphMeshes.forEach((mesh) => {
-        if (mesh.morphTargetInfluences.length) {
-          const nameCtrl = this.morphFolder.add({name: mesh.name || 'Untitled'}, 'name');
-          this.morphCtrls.push(nameCtrl);
-        }
-        for (let i = 0; i < mesh.morphTargetInfluences.length; i++) {
-          const ctrl = this.morphFolder.add(mesh.morphTargetInfluences, i, 0, 1, 0.01).listen();
-          Object.keys(mesh.morphTargetDictionary).forEach((key) => {
-            if (key && mesh.morphTargetDictionary[key] === i) ctrl.name(key);
-          });
-          this.morphCtrls.push(ctrl);
-        }
-      });
-    }
-
-    if (this.clips.length) {
-      this.animFolder.domElement.style.display = '';
-      const actionStates = this.state.actionStates = {};
-      this.clips.forEach((clip, clipIndex) => {
-        clip.name = `${clipIndex + 1}. ${clip.name}`;
-
-        // Autoplay the first clip.
-        let action;
-        if (clipIndex === 0) {
-          actionStates[clip.name] = true;
-          action = this.mixer.clipAction(clip);
-          action.play();
-        } else {
-          actionStates[clip.name] = false;
-        }
-
-        // Play other clips when enabled.
-        const ctrl = this.animFolder.add(actionStates, clip.name).listen();
-        ctrl.onChange((playAnimation) => {
-          action = action || this.mixer.clipAction(clip);
-          action.setEffectiveTimeScale(1);
-          playAnimation ? action.play() : action.stop();
-        });
-        this.animCtrls.push(ctrl);
-      });
     }
   }
 
@@ -648,18 +572,4 @@ function traverseMaterials (object, callback) {
       : [node.material];
     materials.forEach(callback);
   });
-}
-
-// https://stackoverflow.com/a/9039885/1314762
-function isIOS() {
-  return [
-    'iPad Simulator',
-    'iPhone Simulator',
-    'iPod Simulator',
-    'iPad',
-    'iPhone',
-    'iPod'
-  ].includes(navigator.platform)
-  // iPad on iOS 13 detection
-  || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 }
