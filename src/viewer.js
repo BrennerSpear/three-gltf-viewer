@@ -143,9 +143,7 @@ export class Viewer {
     this.morphCtrls = [];
     this.skeletonHelpers = [];
     this.gridHelper = null;
-    this.axesHelper = null;
 
-    this.addAxesHelper();
     this.addGUI();
     if (options.kiosk) this.gui.close();
 
@@ -172,11 +170,6 @@ export class Viewer {
   render () {
 
     this.renderer.render( this.scene, this.activeCamera );
-    if (this.state.grid) {
-      this.axesCamera.position.copy(this.defaultCamera.position)
-      this.axesCamera.lookAt(this.axesScene.position)
-      this.axesRenderer.render( this.axesScene, this.axesCamera );
-    }
   }
 
   resize () {
@@ -187,10 +180,6 @@ export class Viewer {
     this.defaultCamera.updateProjectionMatrix();
     this.vignette.style({aspect: this.defaultCamera.aspect});
     this.renderer.setSize(clientWidth, clientHeight);
-
-    this.axesCamera.aspect = this.axesDiv.clientWidth / this.axesDiv.clientHeight;
-    this.axesCamera.updateProjectionMatrix();
-    this.axesRenderer.setSize(this.axesDiv.clientWidth, this.axesDiv.clientHeight);
   }
 
   load ( modelName, rootPath, assetMap ) {
@@ -296,13 +285,6 @@ export class Viewer {
     }
 
     this.setCamera(DEFAULT_CAMERA);
-
-    this.axesCamera.position.copy(this.defaultCamera.position)
-    this.axesCamera.lookAt(this.axesScene.position)
-    this.axesCamera.near = size / 100;
-    this.axesCamera.far = size * 100;
-    this.axesCamera.updateProjectionMatrix();
-    this.axesCorner.scale.set(size, size, size);
 
     this.controls.saveState();
 
@@ -506,50 +488,16 @@ export class Viewer {
     if (this.state.grid !== Boolean(this.gridHelper)) {
       if (this.state.grid) {
         this.gridHelper = new GridHelper();
-        this.axesHelper = new AxesHelper();
-        this.axesHelper.renderOrder = 999;
-        this.axesHelper.onBeforeRender = (renderer) => renderer.clearDepth();
         this.scene.add(this.gridHelper);
-        this.scene.add(this.axesHelper);
       } else {
         this.scene.remove(this.gridHelper);
-        this.scene.remove(this.axesHelper);
         this.gridHelper = null;
-        this.axesHelper = null;
-        this.axesRenderer.clear();
       }
     }
   }
 
   updateBackground () {
     this.vignette.style({colors: [this.state.bgColor1, this.state.bgColor2]});
-  }
-
-  /**
-   * Adds AxesHelper.
-   *
-   * See: https://stackoverflow.com/q/16226693/1314762
-   */
-  addAxesHelper () {
-    this.axesDiv = document.createElement('div');
-    this.el.appendChild( this.axesDiv );
-    this.axesDiv.classList.add('axes');
-
-    const {clientWidth, clientHeight} = this.axesDiv;
-
-    this.axesScene = new Scene();
-    this.axesCamera = new PerspectiveCamera( 50, clientWidth / clientHeight, 0.1, 10 );
-    this.axesScene.add( this.axesCamera );
-
-    this.axesRenderer = new WebGLRenderer( { alpha: true } );
-    this.axesRenderer.setPixelRatio( window.devicePixelRatio );
-    this.axesRenderer.setSize( this.axesDiv.clientWidth, this.axesDiv.clientHeight );
-
-    this.axesCamera.up = this.defaultCamera.up;
-
-    this.axesCorner = new AxesHelper(5);
-    this.axesScene.add( this.axesCorner );
-    this.axesDiv.appendChild(this.axesRenderer.domElement);
   }
 
   addGUI () {
